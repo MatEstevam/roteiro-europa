@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(uv --version)",
+      "Bash(pip --version)",
+      "Bash(uv tool:*)",
+      "Bash(specify init:*)",
+      "Bash(PYTHONIOENCODING=utf-8 PYTHONUTF8=1 specify init:*)",
+      "Bash(PYTHONIOENCODING=utf-8 PYTHONUTF8=1 echo \"y\")",
+      "Bash(PYTHONIOENCODING=utf-8 PYTHONUTF8=1 NO_COLOR=1 TERM=dumb echo \"y\")",
+      "Bash(chcp.com 65001)",
+      "Bash(PYTHONUTF8=1 python -c \"import specify_cli; print\\(dir\\(specify_cli\\)\\)\")",
+      "Bash(PYTHONUTF8=1 python -c \"from specify_cli import __main__; print\\(dir\\(__main__\\)\\)\")"
+    ]
+  }
+}
