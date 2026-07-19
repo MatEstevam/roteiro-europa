@@ -25,7 +25,7 @@ export default function RootLayout({
         {/* Header / Navigation */}
         <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
           <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-            <Link href="/" className="text-lg font-bold text-indigo-700">
+            <Link href="/" className="text-lg font-bold text-indigo-600">
               Roteiro Europa
             </Link>
 
@@ -33,6 +33,9 @@ export default function RootLayout({
             <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
               <Link href="/planejar" className="text-muted-foreground transition-colors hover:text-foreground">
                 Planejar
+              </Link>
+              <Link href="/#destinos" className="text-muted-foreground transition-colors hover:text-foreground">
+                Destinos
               </Link>
               <Link href="/viagens" className="text-muted-foreground transition-colors hover:text-foreground">
                 Minhas Viagens
