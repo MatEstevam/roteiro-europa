@@ -29,7 +29,7 @@ JSON: {"title":"string","summary":"string","totalDays":N,"estimatedTotalCostPerP
       ],
       response_format: { type: "json_object" },
       temperature: 0.7,
-      max_tokens: 4000,
+      max_tokens: 16000,
     }, { timeout: 55000 });
 
     const content = completion.choices[0]?.message?.content;
