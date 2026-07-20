@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Calendar, Users, DollarSign, RefreshCw, Save, Share2, Edit, MapPin, Plane } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CityTimeline } from "@/components/itinerary/CityTimeline";
 import { ItineraryDayCard } from "@/components/itinerary/ItineraryDayCard";
+import { TripFlightSuggestions } from "@/components/flights/TripFlightSuggestions";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { DataFreshnessNotice } from "@/components/shared/DataFreshnessNotice";
@@ -18,11 +19,22 @@ import type { GeneratedItinerary } from "@/types";
 
 type FilterType = "all" | "free" | "paid" | "reservation";
 
+type TripMeta = {
+  id: string;
+  originCity?: string;
+  originAirport?: string;
+  travelers?: any[];
+  startDate?: string;
+  endDate?: string;
+};
+
 export default function TripViewPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
   const [itinerary, setItinerary] = useState<GeneratedItinerary | null>(null);
+  const [tripMeta, setTripMeta] = useState<TripMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cityFilter, setCityFilter] = useState<string>("all");
@@ -33,11 +45,27 @@ export default function TripViewPage() {
       try {
         if (id === "demo") {
           setItinerary(DEMO_GENERATED_ITINERARY);
+          setTripMeta({ id: "demo", originAirport: "VIX", originCity: "Vitoria" });
         } else {
           const res = await fetch(`/api/trips/${id}`);
-          if (!res.ok) throw new Error("Não foi possível carregar a viagem.");
+          if (!res.ok) throw new Error("Nao foi possivel carregar a viagem.");
           const data = await res.json();
-          setItinerary(data);
+
+          // The API returns a Prisma Trip row; itinerary is in generatedItinerary
+          const itin = data.generatedItinerary as GeneratedItinerary;
+          if (!itin) {
+            setError("Este roteiro ainda nao foi gerado.");
+            return;
+          }
+          setItinerary(itin);
+          setTripMeta({
+            id: data.id,
+            originCity: data.originCity,
+            originAirport: data.originAirport,
+            travelers: data.travelers,
+            startDate: data.startDate,
+            endDate: data.endDate,
+          });
         }
       } catch (err: any) {
         setError(err.message || "Erro ao carregar viagem.");
@@ -49,20 +77,20 @@ export default function TripViewPage() {
   }, [id]);
 
   if (loading) return <LoadingSkeleton variant="page" />;
-  if (error || !itinerary) return <ErrorState message={error || "Viagem não encontrada."} />;
+  if (error || !itinerary) return <ErrorState message={error || "Viagem nao encontrada."} />;
 
   const { title, totalDays, cities, estimatedTotalCostPerPerson, days } = itinerary;
 
-  const formatDate = (d: string) => {
-    const date = new Date(d);
-    return date.toLocaleDateString("pt-BR");
-  };
+  const formatDate = (d: string) => new Date(d).toLocaleDateString("pt-BR");
 
-  // Derive start/end dates, countries and city names from cities array
   const startDate = cities.length > 0 ? cities[0].arrivalDate : "";
   const endDate = cities.length > 0 ? cities[cities.length - 1].departureDate : "";
   const countries = [...new Set(cities.map((c) => c.country))];
   const cityNames = cities.map((c) => c.city);
+
+  const travelerCount = tripMeta?.travelers?.length || 2;
+  const adultsCount = tripMeta?.travelers?.filter((t: any) => t.type === "adult").length || travelerCount;
+  const childrenCount = tripMeta?.travelers?.filter((t: any) => t.type === "child").length || 0;
 
   const filteredDays = (days || []).filter((day) => {
     if (cityFilter !== "all" && day.city !== cityFilter) return false;
@@ -79,7 +107,6 @@ export default function TripViewPage() {
     <div className="flex-1">
       {/* Gradient Hero Header */}
       <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-700">
-        {/* Decorative elements */}
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
         <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute -bottom-10 -left-10 h-48 w-48 rounded-full bg-yellow-300/20 blur-2xl" />
@@ -107,7 +134,7 @@ export default function TripViewPage() {
                 </span>
                 <span className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 backdrop-blur-sm">
                   <Users className="h-4 w-4" />
-                  2 viajantes
+                  {travelerCount} viajante{travelerCount !== 1 ? "s" : ""}
                 </span>
               </div>
 
@@ -138,17 +165,17 @@ export default function TripViewPage() {
 
           {/* Action Buttons */}
           <div className="mt-6 flex flex-wrap gap-2">
-            <Button size="sm" className="bg-white text-indigo-700 shadow-md hover:bg-white/90">
+            <Button
+              size="sm"
+              className="bg-white text-indigo-700 shadow-md hover:bg-white/90"
+              onClick={() => router.push(`/viagens/${id}/editar`)}
+            >
               <Edit className="mr-1.5 h-4 w-4" />
-              Editar preferências
+              Editar preferencias
             </Button>
             <Button size="sm" className="bg-white/20 text-white backdrop-blur-sm border-white/30 hover:bg-white/30">
               <RefreshCw className="mr-1.5 h-4 w-4" />
               Regenerar
-            </Button>
-            <Button size="sm" className="bg-white/20 text-white backdrop-blur-sm border-white/30 hover:bg-white/30">
-              <Save className="mr-1.5 h-4 w-4" />
-              Salvar
             </Button>
             <Button size="sm" className="bg-white/20 text-white backdrop-blur-sm border-white/30 hover:bg-white/30">
               <Share2 className="mr-1.5 h-4 w-4" />
@@ -162,6 +189,18 @@ export default function TripViewPage() {
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
         {/* City Timeline */}
         <CityTimeline cities={cities} selectedCity={cityFilter !== "all" ? cityFilter : undefined} onCityClick={(city) => setCityFilter(city === cityFilter ? "all" : city)} />
+
+        {/* Flight Suggestions */}
+        {tripMeta && id !== "demo" && cities.length > 0 && (
+          <TripFlightSuggestions
+            originAirport={tripMeta.originAirport || "GRU"}
+            firstCityName={cities[0].city}
+            startDate={startDate}
+            endDate={endDate}
+            adults={adultsCount}
+            children={childrenCount}
+          />
+        )}
 
         {/* Filters */}
         <div className="rounded-xl border bg-gradient-to-r from-indigo-50/50 to-blue-50/50 dark:from-indigo-950/20 dark:to-blue-950/20 p-4 shadow-sm">
@@ -215,7 +254,7 @@ export default function TripViewPage() {
                 )}
                 onClick={() => setTypeFilter(typeFilter === "reservation" ? "all" : "reservation")}
               >
-                Reserva necessária
+                Reserva necessaria
               </Badge>
             </div>
           </div>

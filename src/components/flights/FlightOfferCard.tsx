@@ -12,6 +12,7 @@ type FlightOfferCardProps = {
     bestBalance?: boolean;
   };
   isDemo?: boolean;
+  skyscannerUrl?: string;
 };
 
 function formatDuration(minutes: number): string {
@@ -42,6 +43,7 @@ export function FlightOfferCard({
   offer,
   highlights,
   isDemo,
+  skyscannerUrl,
 }: FlightOfferCardProps) {
   const lastUpdated = new Date(offer.lastUpdatedAt).toLocaleString("pt-BR");
 
@@ -144,14 +146,14 @@ export function FlightOfferCard({
               {formatPrice(offer.pricePerPerson, offer.currency)} por pessoa
             </p>
           </div>
-          {offer.bookingUrl && (
+          {(skyscannerUrl || offer.bookingUrl) && (
             <a
-              href={offer.bookingUrl}
+              href={skyscannerUrl || offer.bookingUrl}
               target="_blank"
               rel="noopener noreferrer"
             >
-              <Button size="sm" variant="outline">
-                Ver oferta
+              <Button size="sm" className="bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white border-0">
+                {skyscannerUrl ? "Ver precos" : "Ver oferta"}
                 <ExternalLink className="ml-1 h-3 w-3" />
               </Button>
             </a>

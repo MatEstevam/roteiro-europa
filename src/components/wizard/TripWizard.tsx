@@ -63,7 +63,7 @@ export function TripWizard() {
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Roteiro Europa</h2>
+          <h2 className="text-2xl font-bold">Planejar Viagem</h2>
           <span className="text-sm text-muted-foreground">
             Passo {wizard.stepIndex + 1} de {wizard.totalSteps}
           </span>
@@ -120,7 +120,7 @@ export function TripWizard() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Gerando...
+                  Gerando roteiro com IA...
                 </>
               ) : (
                 <>

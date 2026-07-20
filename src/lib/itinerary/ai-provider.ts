@@ -4,4 +4,4 @@ export interface AIItineraryProvider {
   generate(preferences: TripPreferences): Promise<GeneratedItinerary>;
 }
 
-// Not implemented in MVP. Interface only for future AI integration.
+export { OpenAIItineraryProvider } from "./openai-provider";

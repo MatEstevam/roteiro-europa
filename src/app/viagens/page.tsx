@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Calendar, Globe, LogIn, MapPin, Plane, Plus, Sparkles } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,19 +37,18 @@ const cardAccents = [
 
 export default function ViagensPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [trips, setTrips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [authenticated, setAuthenticated] = useState(false);
+
+  const authenticated = status === "authenticated";
 
   useEffect(() => {
-    // Check basic auth status (simplified - in production use a proper auth check)
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    if (!token) {
-      setAuthenticated(false);
+    if (status === "loading") return;
+    if (!authenticated) {
       setLoading(false);
       return;
     }
-    setAuthenticated(true);
 
     async function fetchTrips() {
       try {
@@ -64,7 +64,7 @@ export default function ViagensPage() {
       }
     }
     fetchTrips();
-  }, []);
+  }, [status, authenticated]);
 
   if (loading) return <LoadingSkeleton variant="page" />;
 
@@ -84,7 +84,7 @@ export default function ViagensPage() {
           Faca login para ver suas viagens salvas e continuar planejando suas aventuras
         </p>
         <Link
-          href="/api/auth/signin"
+          href="/login"
           className={cn(
             buttonVariants({ size: "lg" }),
             "bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white shadow-lg shadow-indigo-500/25 border-0"
@@ -198,16 +198,19 @@ export default function ViagensPage() {
 
                     <CardContent className="pb-5">
                       <div className="flex flex-wrap gap-1.5">
-                        {(trip.cities || []).slice(0, 4).map((city: string) => (
+                        {(trip.cities || []).slice(0, 4).map((city: any) => {
+                          const cityName = typeof city === "string" ? city : city.city;
+                          return (
                           <Badge
-                            key={city}
+                            key={cityName}
                             variant="outline"
                             className="text-xs bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700"
                           >
                             <MapPin className="mr-0.5 h-3 w-3 text-indigo-500" />
-                            {city}
+                            {cityName}
                           </Badge>
-                        ))}
+                          );
+                        })}
                         {(trip.cities || []).length > 4 && (
                           <Badge
                             variant="outline"
