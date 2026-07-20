@@ -6,6 +6,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { GeneratedItinerary } from "@/types";
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for") || "unknown";
   const rateCheck = checkRateLimit(ip, ITINERARY_LIMIT);

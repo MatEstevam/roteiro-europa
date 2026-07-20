@@ -24,9 +24,11 @@ export function TripWizard() {
   const router = useRouter();
   const wizard = useTripWizard();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   async function handleSubmit() {
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const response = await fetch("/api/itinerary/generate", {
         method: "POST",
@@ -34,12 +36,17 @@ export function TripWizard() {
         body: JSON.stringify(wizard.formData),
       });
 
-      if (!response.ok) throw new Error("Erro ao gerar roteiro");
-
       const data = await response.json();
+
+      if (!response.ok) {
+        const msg = data?.error?.message || data?.error?.details?.[0]?.message || "Erro ao gerar roteiro";
+        throw new Error(msg);
+      }
+
       router.push(`/viagens/${data.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao gerar roteiro:", error);
+      setSubmitError(error.message || "Erro ao gerar roteiro. Tente novamente.");
       setIsSubmitting(false);
     }
   }
@@ -96,6 +103,12 @@ export function TripWizard() {
 
       <CardContent className="space-y-6">
         {renderStep()}
+
+        {submitError && (
+          <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
 
         {/* Navigation buttons */}
         <div className="flex justify-between pt-6 border-t">
