@@ -112,13 +112,24 @@ export function DateRangeStep({ data, onUpdate }: DateRangeStepProps) {
             <Label htmlFor="adults">Adultos</Label>
             <Input
               id="adults"
-              type="number"
-              min={1}
-              max={10}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={adults}
-              onChange={(e) =>
-                updateTravelers({ adults: parseInt(e.target.value) || 1 })
-              }
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "") {
+                  updateTravelers({ adults: 0 });
+                  return;
+                }
+                const num = parseInt(val);
+                if (!isNaN(num) && num >= 0 && num <= 10) {
+                  updateTravelers({ adults: num });
+                }
+              }}
+              onBlur={() => {
+                if (adults < 1) updateTravelers({ adults: 1 });
+              }}
               className="min-h-[44px]"
             />
           </div>
@@ -126,13 +137,21 @@ export function DateRangeStep({ data, onUpdate }: DateRangeStepProps) {
             <Label htmlFor="children">Crianças (0-17 anos)</Label>
             <Input
               id="children"
-              type="number"
-              min={0}
-              max={8}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={children}
-              onChange={(e) =>
-                updateTravelers({ children: parseInt(e.target.value) || 0 })
-              }
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "") {
+                  updateTravelers({ children: 0 });
+                  return;
+                }
+                const num = parseInt(val);
+                if (!isNaN(num) && num >= 0 && num <= 8) {
+                  updateTravelers({ children: num });
+                }
+              }}
               className="min-h-[44px]"
             />
           </div>

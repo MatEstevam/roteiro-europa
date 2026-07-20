@@ -36,13 +36,18 @@ export function TripWizard() {
         body: JSON.stringify(wizard.formData),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        const msg = data?.error?.message || data?.error?.details?.[0]?.message || "Erro ao gerar roteiro";
+        let msg = "Erro ao gerar roteiro. Tente novamente.";
+        try {
+          const errorData = await response.json();
+          msg = errorData?.error?.message || errorData?.error?.details?.[0]?.message || msg;
+        } catch {
+          // Response wasn't JSON (e.g. Vercel error page)
+        }
         throw new Error(msg);
       }
 
+      const data = await response.json();
       router.push(`/viagens/${data.id}`);
     } catch (error: any) {
       console.error("Erro ao gerar roteiro:", error);
