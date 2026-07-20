@@ -62,16 +62,28 @@ export async function POST(request: NextRequest) {
         mandatoryPlaces: pref.mandatoryPlaces ?? [],
         acceptAlternativeAirports: pref.acceptAlternativeAirports ?? false,
         maxAirportDistance: pref.maxAirportDistance ?? null,
-        status: "draft",
+        status: body.itinerary ? "generated" : "draft",
         generatedItinerary: body.itinerary ?? null,
         travelers: pref.travelers
           ? {
-              create: pref.travelers.map(
-                (t: { type: string; age?: number }) => ({
-                  type: t.type,
-                  age: t.age ?? null,
-                })
-              ),
+              create: Array.isArray(pref.travelers)
+                ? pref.travelers.map((t: { type: string; age?: number }) => ({
+                    type: t.type,
+                    age: t.age ?? null,
+                  }))
+                : [
+                    ...Array.from(
+                      { length: pref.travelers.adults || 1 },
+                      () => ({ type: "adult" as const })
+                    ),
+                    ...Array.from(
+                      { length: pref.travelers.children || 0 },
+                      (_, i) => ({
+                        type: "child" as const,
+                        age: pref.travelers.childrenAges?.[i] ?? null,
+                      })
+                    ),
+                  ],
             }
           : undefined,
         countries: pref.countries
@@ -82,9 +94,9 @@ export async function POST(request: NextRequest) {
               })),
             }
           : undefined,
-        cities: pref.cities
+        cities: (body.itinerary?.cities || pref.cities)
           ? {
-              create: pref.cities.map(
+              create: (body.itinerary?.cities || pref.cities).map(
                 (
                   c: {
                     city: string;

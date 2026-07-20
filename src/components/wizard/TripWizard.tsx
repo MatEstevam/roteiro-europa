@@ -30,16 +30,17 @@ export function TripWizard() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const response = await fetch("/api/itinerary/generate", {
+      // Step 1: Generate itinerary via AI
+      const genResponse = await fetch("/api/itinerary/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(wizard.formData),
       });
 
-      if (!response.ok) {
+      if (!genResponse.ok) {
         let msg = "Erro ao gerar roteiro. Tente novamente.";
         try {
-          const errorData = await response.json();
+          const errorData = await genResponse.json();
           msg = errorData?.error?.message || errorData?.error?.details?.[0]?.message || msg;
         } catch {
           // Response wasn't JSON (e.g. Vercel error page)
@@ -47,8 +48,27 @@ export function TripWizard() {
         throw new Error(msg);
       }
 
-      const data = await response.json();
-      router.push(`/viagens/${data.id}`);
+      const { itinerary, preferences } = await genResponse.json();
+
+      // Step 2: Save trip to database
+      const saveResponse = await fetch("/api/trips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: itinerary.title,
+          preferences,
+          itinerary,
+        }),
+      });
+
+      if (saveResponse.ok) {
+        const saved = await saveResponse.json();
+        router.push(`/viagens/${saved.id}`);
+      } else {
+        // Save failed but itinerary was generated — store in sessionStorage and show anyway
+        sessionStorage.setItem("generatedItinerary", JSON.stringify(itinerary));
+        router.push("/viagens/preview");
+      }
     } catch (error: any) {
       console.error("Erro ao gerar roteiro:", error);
       setSubmitError(error.message || "Erro ao gerar roteiro. Tente novamente.");
