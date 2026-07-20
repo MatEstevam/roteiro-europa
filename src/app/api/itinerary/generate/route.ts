@@ -107,14 +107,14 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ id: trip.id, itinerary });
-  } catch (error) {
-    console.error("Itinerary generation error:", error);
+  } catch (error: any) {
+    console.error("Itinerary generation error:", error?.message || error);
+    console.error("Error stack:", error?.stack);
     return NextResponse.json(
       {
         error: {
           code: "GENERATION_ERROR",
-          message:
-            "Nao foi possivel gerar o roteiro. Tente novamente.",
+          message: error?.message || "Nao foi possivel gerar o roteiro. Tente novamente.",
         },
       },
       { status: 500 }
