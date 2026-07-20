@@ -14,6 +14,9 @@ import { ErrorState } from "@/components/shared/ErrorState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ApiStatusBadge } from "@/components/shared/ApiStatusBadge";
 import { DataFreshnessNotice } from "@/components/shared/DataFreshnessNotice";
+import { FlightOfferCard } from "@/components/flights/FlightOfferCard";
+import { buildSkyscannerUrl } from "@/lib/flights/skyscanner-deeplink";
+import { highlightFlights } from "@/lib/flights/sort";
 import { cn } from "@/lib/utils";
 
 type SortOption = "price" | "duration" | "stops" | "balance" | "time";
@@ -34,6 +37,8 @@ export default function PassagensPage() {
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("price");
+  const [isDemo, setIsDemo] = useState(true);
+  const [provider, setProvider] = useState("");
 
   function handleSwap() {
     setOrigin(destination);
@@ -70,6 +75,8 @@ export default function PassagensPage() {
 
       const data = await res.json();
       setResults(data.offers || data || []);
+      setIsDemo(data.isDemo ?? true);
+      setProvider(data.provider ?? "");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -79,13 +86,16 @@ export default function PassagensPage() {
 
   const sortedResults = [...results].sort((a, b) => {
     switch (sortBy) {
-      case "price": return (a.price || 0) - (b.price || 0);
-      case "duration": return (a.totalDuration || 0) - (b.totalDuration || 0);
-      case "stops": return (a.stops || 0) - (b.stops || 0);
-      case "time": return (a.departureTime || "").localeCompare(b.departureTime || "");
-      default: return (a.score || 0) - (b.score || 0);
+      case "price": return (a.totalPrice || a.price || 0) - (b.totalPrice || b.price || 0);
+      case "duration": return (a.outbound?.durationMinutes || a.totalDuration || 0) - (b.outbound?.durationMinutes || b.totalDuration || 0);
+      case "stops": return (a.outbound?.stops || a.stops || 0) - (b.outbound?.stops || b.stops || 0);
+      case "time": return (a.outbound?.departureTime || a.departureTime || "").localeCompare(b.outbound?.departureTime || b.departureTime || "");
+      case "balance": return (b.balanceScore || 0) - (a.balanceScore || 0);
+      default: return 0;
     }
   });
+
+  const highlights = highlightFlights(results);
 
   return (
     <div className="flex-1">
@@ -259,79 +269,26 @@ export default function PassagensPage() {
                 </Select>
               </div>
 
-              <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {sortedResults.map((offer, index) => (
-                  <Card
+                  <FlightOfferCard
                     key={offer.id || index}
-                    className={cn(
-                      "group border transition-all duration-200 hover:shadow-lg hover:shadow-blue-900/5 hover:-translate-y-0.5",
-                      offer.isBestPrice && "border-green-200 bg-green-50/30",
-                      offer.isFastest && "border-blue-200 bg-blue-50/30"
-                    )}
-                  >
-                    <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-                      {/* Flight info */}
-                      <div className="flex-1 space-y-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-base font-semibold">{offer.airline || "Companhia"}</span>
-                          {offer.isBestPrice && (
-                            <Badge className="border-0 bg-emerald-100 text-emerald-700 font-medium">
-                              Melhor preço
-                            </Badge>
-                          )}
-                          {offer.isFastest && (
-                            <Badge className="border-0 bg-sky-100 text-sky-700 font-medium">
-                              Mais rápido
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Visual route */}
-                        <div className="flex items-center gap-3">
-                          <div className="text-center">
-                            <p className="text-lg font-bold">{offer.departureTime || "--:--"}</p>
-                            <p className="text-xs font-medium uppercase text-muted-foreground">{origin || "---"}</p>
-                          </div>
-
-                          <div className="flex flex-1 items-center gap-1 px-2">
-                            <div className="h-[2px] flex-1 bg-gradient-to-r from-blue-300 to-indigo-300 rounded" />
-                            <div className="relative">
-                              <Plane className="h-4 w-4 text-blue-600" />
-                            </div>
-                            <div className="h-[2px] flex-1 bg-gradient-to-r from-indigo-300 to-blue-300 rounded" />
-                          </div>
-
-                          <div className="text-center">
-                            <p className="text-lg font-bold">{offer.arrivalTime || "--:--"}</p>
-                            <p className="text-xs font-medium uppercase text-muted-foreground">{destination || "---"}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className={cn(
-                            "text-xs font-medium",
-                            offer.stops === 0
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-amber-200 bg-amber-50 text-amber-700"
-                          )}>
-                            {offer.stops === 0 ? "Direto" : `${offer.stops} conexão${offer.stops > 1 ? "ões" : ""}`}
-                          </Badge>
-                          {offer.duration && (
-                            <span className="text-xs text-muted-foreground font-medium">{offer.duration}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Price */}
-                      <div className="sm:text-right sm:pl-6 sm:border-l sm:border-border/50">
-                        <p className="text-sm text-muted-foreground mb-0.5">a partir de</p>
-                        <p className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
-                          R$ {(offer.price || 0).toLocaleString("pt-BR")}
-                        </p>
-                        <p className="text-xs text-muted-foreground">por pessoa</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    offer={offer}
+                    isDemo={isDemo}
+                    highlights={{
+                      cheapest: highlights.cheapest === offer.id,
+                      fastest: highlights.fastest === offer.id,
+                      bestBalance: highlights.bestBalance === offer.id,
+                    }}
+                    skyscannerUrl={buildSkyscannerUrl({
+                      origin: origin || offer.outbound?.departureAirport || "",
+                      destination: destination || offer.outbound?.arrivalAirport || "",
+                      departureDate,
+                      returnDate: returnDate || undefined,
+                      adults: Number(adults),
+                      children: Number(children),
+                    })}
+                  />
                 ))}
               </div>
             </div>
@@ -339,7 +296,7 @@ export default function PassagensPage() {
 
           {/* Footer notices */}
           <div className="space-y-2">
-            <ApiStatusBadge isDemo={true} />
+            <ApiStatusBadge isDemo={isDemo} />
             <DataFreshnessNotice />
           </div>
         </div>

@@ -1,11 +1,28 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { MapPin, Clock, Globe, Coins, Calendar, Star, ChevronRight, ArrowLeft } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { DESTINATIONS_DATA } from "@/lib/demo/destination-data";
+
+async function fetchPexelsImage(query: string): Promise<string | null> {
+  const key = process.env.PEXELS_API_KEY;
+  if (!key) return null;
+  try {
+    const res = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1&orientation=landscape`,
+      { headers: { Authorization: key }, next: { revalidate: 86400 } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.photos?.[0]?.src?.medium || null;
+  } catch {
+    return null;
+  }
+}
 
 type Props = {
   params: Promise<{ cidade: string }>;
@@ -47,6 +64,12 @@ export default async function DestinoPage({ params }: Props) {
   const dest = DESTINATIONS_DATA[cidade];
 
   if (!dest) notFound();
+
+  // Fetch images from Pexels for each attraction
+  const imagePromises = dest.attractions.map((a) =>
+    fetchPexelsImage(`${a.name} ${dest.name}`)
+  );
+  const images = await Promise.all(imagePromises);
 
   return (
     <div className="flex-1">
@@ -145,16 +168,25 @@ export default async function DestinoPage({ params }: Props) {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {dest.attractions.map((attraction) => (
+          {dest.attractions.map((attraction, index) => (
             <Card
               key={attraction.id}
               className="group overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
             >
-              {/* Image placeholder */}
               <div className="relative h-40 bg-gradient-to-br from-slate-200 to-slate-300 overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center text-slate-400">
-                  <MapPin className="h-8 w-8" />
-                </div>
+                {images[index] ? (
+                  <Image
+                    src={images[index]!}
+                    alt={attraction.name}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                    <MapPin className="h-8 w-8" />
+                  </div>
+                )}
                 {/* Category badge */}
                 <div className="absolute top-2 left-2">
                   <Badge className={cn("text-xs font-medium border-0", CATEGORY_COLORS[attraction.category] || "bg-gray-100 text-gray-700")}>
