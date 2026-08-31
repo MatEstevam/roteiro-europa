@@ -99,6 +99,7 @@ export function TripWizard() {
       } else {
         // Save failed but itinerary was generated — store in sessionStorage and show anyway
         sessionStorage.setItem("generatedItinerary", JSON.stringify(itinerary));
+        sessionStorage.setItem("generatedPreferences", JSON.stringify(wizard.formData));
         router.push("/viagens/preview");
       }
     } catch (error: any) {

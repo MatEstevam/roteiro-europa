@@ -40,6 +40,7 @@ export function TripViewContent() {
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
   const [sharing, setSharing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function loadTrip() {
@@ -112,6 +113,29 @@ export function TripViewContent() {
       return true;
     });
   });
+
+  async function handleSave() {
+    if (id !== "preview" || !itinerary) return;
+    setSaving(true);
+    try {
+      const stored = sessionStorage.getItem("generatedPreferences");
+      const preferences = stored ? JSON.parse(stored) : {};
+      const res = await fetch("/api/trips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: itinerary.title, preferences, itinerary }),
+      });
+      if (!res.ok) throw new Error("Erro ao salvar. Faça login e tente novamente.");
+      const saved = await res.json();
+      sessionStorage.removeItem("generatedItinerary");
+      sessionStorage.removeItem("generatedPreferences");
+      router.push(`/viagens/${saved.id}`);
+    } catch (err: any) {
+      alert(err.message || "Erro ao salvar viagem.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleShare() {
     if (id === "demo" || id === "preview") {
@@ -194,14 +218,27 @@ export function TripViewContent() {
 
           {/* Action Buttons */}
           <div className="mt-6 flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              className="bg-white text-indigo-700 shadow-md hover:bg-white/90"
-              onClick={() => router.push(`/viagens/${id}/editar`)}
-            >
-              <Edit className="mr-1.5 h-4 w-4" />
-              Editar preferencias
-            </Button>
+            {id === "preview" && (
+              <Button
+                size="sm"
+                className="bg-white text-indigo-700 shadow-md hover:bg-white/90"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                <Save className="mr-1.5 h-4 w-4" />
+                {saving ? "Salvando..." : "Salvar viagem"}
+              </Button>
+            )}
+            {id !== "preview" && id !== "demo" && (
+              <Button
+                size="sm"
+                className="bg-white text-indigo-700 shadow-md hover:bg-white/90"
+                onClick={() => router.push(`/viagens/${id}/editar`)}
+              >
+                <Edit className="mr-1.5 h-4 w-4" />
+                Editar preferencias
+              </Button>
+            )}
             <Button size="sm" className="bg-white/20 text-white backdrop-blur-sm border-white/30 hover:bg-white/30">
               <RefreshCw className="mr-1.5 h-4 w-4" />
               Regenerar
