@@ -4,6 +4,7 @@ import Link from "next/link";
 import "./globals.css";
 import { MobileNav } from "./mobile-nav";
 import { Providers } from "./providers";
+import { AuthButton } from "@/components/shared/AuthButton";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -70,10 +71,14 @@ export default function RootLayout({
               <Link href="/configuracoes" className="text-muted-foreground transition-colors hover:text-foreground">
                 Configurações
               </Link>
+              <AuthButton />
             </nav>
 
-            {/* Mobile hamburger */}
-            <MobileNav />
+            {/* Mobile hamburger + auth */}
+            <div className="flex items-center gap-2 md:hidden">
+              <AuthButton />
+              <MobileNav />
+            </div>
           </div>
         </header>
 
