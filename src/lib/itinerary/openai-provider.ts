@@ -10,7 +10,7 @@ export class OpenAIItineraryProvider implements AIItineraryProvider {
     this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
 
-  async generate(preferences: TripPreferences): Promise<GeneratedItinerary> {
+  private buildPrompts(preferences: TripPreferences) {
     const totalDays = this.calculateDays(preferences.startDate, preferences.endDate);
     const paceLabel = { slow: "tranquilo (max 2 atividades/dia)", balanced: "equilibrado (3 atividades/dia)", intense: "intenso (4 atividades/dia)" }[preferences.pace];
     const budgetLabel = { economic: "economico", moderate: "moderado", comfortable: "confortavel" }[preferences.budgetLevel];
@@ -20,6 +20,12 @@ export class OpenAIItineraryProvider implements AIItineraryProvider {
 JSON: {"title":"string","summary":"string","totalDays":N,"estimatedTotalCostPerPerson":{"min":N,"max":N,"currency":"BRL"},"cities":[{"city":"","country":"","arrivalDate":"YYYY-MM-DD","departureDate":"YYYY-MM-DD","numberOfNights":N,"description":"","estimatedDailyCostPerPerson":{"min":N,"max":N,"currency":"BRL"}}],"days":[{"dayNumber":N,"date":"YYYY-MM-DD","city":"","country":"","title":"","summary":"","estimatedDailyCostPerPerson":{"min":N,"max":N,"currency":"BRL"},"activities":[{"id":"uuid","name":"","category":"sightseeing|museum|food|nature|shopping|entertainment|transit|meal|rest","description":"","address":"","suggestedStartTime":"HH:MM","suggestedEndTime":"HH:MM","estimatedDurationMinutes":N,"estimatedCostPerPerson":{"min":N,"max":N,"currency":"BRL"},"bookingRecommended":false,"website":null,"notes":[]}]}],"warnings":[],"recommendations":[]}`;
 
     const userPrompt = `Roteiro ${totalDays} dias. Destinos: ${preferences.countries.join(", ")}${preferences.preferredCities?.length ? ` (${preferences.preferredCities.join(", ")})` : ""}. Datas: ${preferences.startDate} a ${preferences.endDate}. Origem: ${preferences.originCity}. ${preferences.travelers.adults} adultos${preferences.travelers.children > 0 ? `, ${preferences.travelers.children} criancas` : ""}. Interesses: ${preferences.interests.length > 0 ? preferences.interests.join(", ") : "geral"}. ${preferences.mandatoryPlaces?.length ? `Obrigatorio: ${preferences.mandatoryPlaces.join(", ")}.` : ""} Descricoes curtas. JSON completo.`;
+
+    return { systemPrompt, userPrompt };
+  }
+
+  async generate(preferences: TripPreferences): Promise<GeneratedItinerary> {
+    const { systemPrompt, userPrompt } = this.buildPrompts(preferences);
 
     const completion = await this.client.chat.completions.create({
       model: "gpt-4o-mini",
@@ -39,6 +45,52 @@ JSON: {"title":"string","summary":"string","totalDays":N,"estimatedTotalCostPerP
 
     const parsed = JSON.parse(content) as GeneratedItinerary;
     return this.sanitize(parsed);
+  }
+
+  async generateStream(preferences: TripPreferences): Promise<ReadableStream> {
+    const { systemPrompt, userPrompt } = this.buildPrompts(preferences);
+
+    const stream = await this.client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 16000,
+      stream: true,
+    });
+
+    const encoder = new TextEncoder();
+    const sanitize = this.sanitize;
+    let fullContent = "";
+
+    return new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const delta = chunk.choices[0]?.delta?.content || "";
+            if (delta) {
+              fullContent += delta;
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: delta })}\n\n`));
+            }
+          }
+          // Send the final parsed + sanitized result
+          const parsed = JSON.parse(fullContent) as GeneratedItinerary;
+          const sanitized = sanitize(parsed);
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ done: true, itinerary: sanitized })}\n\n`)
+          );
+          controller.close();
+        } catch (error: any) {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ error: error.message || "Erro ao gerar roteiro" })}\n\n`)
+          );
+          controller.close();
+        }
+      },
+    });
   }
 
   private sanitize(itinerary: GeneratedItinerary): GeneratedItinerary {

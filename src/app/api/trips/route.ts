@@ -130,8 +130,11 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(trip, { status: 201 });
-  } catch (error) {
-    console.error("Error creating trip:", error);
-    return NextResponse.json({ error: "Dados invalidos" }, { status: 400 });
+  } catch (error: any) {
+    console.error("Error creating trip:", error?.message || error);
+    const message = error?.code === "P2002"
+      ? "Viagem duplicada"
+      : error?.message || "Erro ao salvar viagem";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

@@ -30,7 +30,7 @@ export function TripWizard() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      // Step 1: Generate itinerary via AI
+      // Step 1: Generate itinerary (streams from OpenAI to avoid timeout)
       const genResponse = await fetch("/api/itinerary/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -48,7 +48,39 @@ export function TripWizard() {
         throw new Error(msg);
       }
 
-      const { itinerary, preferences } = await genResponse.json();
+      let itinerary;
+      const contentType = genResponse.headers.get("content-type") || "";
+
+      if (contentType.includes("text/event-stream")) {
+        // Streaming response from OpenAI — read SSE until done
+        const reader = genResponse.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process complete SSE lines
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const payload = JSON.parse(line.slice(6));
+            if (payload.error) throw new Error(payload.error);
+            if (payload.done) {
+              itinerary = payload.itinerary;
+            }
+          }
+        }
+
+        if (!itinerary) throw new Error("Roteiro incompleto. Tente novamente.");
+      } else {
+        // Non-streaming (deterministic fallback)
+        const data = await genResponse.json();
+        itinerary = data.itinerary;
+      }
 
       // Step 2: Save trip to database
       const saveResponse = await fetch("/api/trips", {
@@ -56,7 +88,7 @@ export function TripWizard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: itinerary.title,
-          preferences,
+          preferences: wizard.formData,
           itinerary,
         }),
       });

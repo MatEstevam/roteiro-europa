@@ -11,8 +11,30 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Roteiro Europa",
-  description: "Planejador de viagens para a Europa",
+  metadataBase: new URL("https://roteiro-europa.vercel.app"),
+  title: {
+    default: "Roteiro Europa - Planejador de Viagens para a Europa",
+    template: "%s | Roteiro Europa",
+  },
+  description:
+    "Planeje sua viagem pela Europa com roteiros personalizados, passagens aereas e dicas praticas. Gratuito e pensado para familias brasileiras.",
+  keywords: [
+    "viagem europa",
+    "roteiro europa",
+    "passagens aereas europa",
+    "planejador viagem",
+    "roteiro personalizado",
+    "ferias europa",
+  ],
+  openGraph: {
+    locale: "pt_BR",
+    type: "website",
+    siteName: "Roteiro Europa",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

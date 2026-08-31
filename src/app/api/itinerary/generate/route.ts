@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { tripPreferencesSchema } from "@/lib/validators/trip";
 import { generateItinerary } from "@/lib/itinerary/generator";
 import { checkRateLimit, ITINERARY_LIMIT } from "@/lib/rate-limit";
-import { GeneratedItinerary } from "@/types";
-
-export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for") || "unknown";
@@ -28,7 +25,7 @@ export async function POST(request: NextRequest) {
       {
         error: {
           code: "VALIDATION_ERROR",
-          message: "Dados invalidos.",
+          message: parsed.error.issues.map((i) => i.message).join(". ") || "Dados invalidos.",
           details: parsed.error.issues,
         },
       },
@@ -38,20 +35,26 @@ export async function POST(request: NextRequest) {
 
   try {
     const pref = parsed.data;
-    let itinerary: GeneratedItinerary;
 
     if (process.env.OPENAI_API_KEY) {
+      // Stream the OpenAI response to avoid Vercel Hobby 60s timeout
       const { OpenAIItineraryProvider } = await import(
         "@/lib/itinerary/openai-provider"
       );
       const provider = new OpenAIItineraryProvider();
-      itinerary = await provider.generate(pref);
-    } else {
-      itinerary = generateItinerary(pref);
-    }
+      const stream = await provider.generateStream(pref);
 
-    // Return itinerary without saving to DB (client will save via POST /api/trips)
-    return NextResponse.json({ itinerary, preferences: pref });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
+    } else {
+      const itinerary = generateItinerary(pref);
+      return NextResponse.json({ itinerary, preferences: pref });
+    }
   } catch (error: any) {
     console.error("Itinerary generation error:", error?.message || error);
     return NextResponse.json(

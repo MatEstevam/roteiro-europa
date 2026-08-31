@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: Props) {
   const dest = DESTINATIONS_DATA[cidade];
   if (!dest) return { title: "Destino nao encontrado" };
   return {
-    title: `${dest.name}, ${dest.country} - O que conhecer | Roteiro Europa`,
+    title: `${dest.name}, ${dest.country} - O que conhecer`,
     description: dest.description,
   };
 }

@@ -37,7 +37,24 @@
       "Bash(sed -i 's/- \\\\[ \\\\] T01/- [x] T01/g' specs/001-roteiro-europa-mvp/tasks.md)",
       "Bash(sed -i 's/- \\\\[ \\\\] T02/- [x] T02/g' specs/001-roteiro-europa-mvp/tasks.md)",
       "Bash(sed -i 's/- \\\\[ \\\\] T03/- [x] T03/g' specs/001-roteiro-europa-mvp/tasks.md)",
-      "Bash(sed -i 's/- \\\\[ \\\\] T04/- [x] T04/g' specs/001-roteiro-europa-mvp/tasks.md)"
+      "Bash(sed -i 's/- \\\\[ \\\\] T04/- [x] T04/g' specs/001-roteiro-europa-mvp/tasks.md)",
+      "mcp__supabase__get_project_url",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__list_tables",
+      "Bash(grep -l \"generateItinerary\\\\|FlightSearch\" /c/Users/mateu/viagem/src/app/**/*.ts)",
+      "Bash(npm run:*)",
+      "mcp__supabase__execute_sql",
+      "Bash(node:*)",
+      "Bash(time curl:*)",
+      "Bash(vercel env:*)",
+      "Bash(vercel deploy:*)",
+      "Bash(vercel logs:*)",
+      "Bash(printf 'postgresql://postgres:Kombibranca00%%21@db.mrtwmismkstnwkbwckxu.supabase.co:5432/postgres')",
+      "Bash(git add:*)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }
