@@ -33,11 +33,11 @@ export function AuthButton() {
   }
 
   return (
-    <Button variant="default" size="sm" asChild className="bg-indigo-600 hover:bg-indigo-700">
-      <Link href="/login">
+    <Link href="/login">
+      <Button variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700">
         <LogIn className="mr-1 h-4 w-4" />
         Entrar
-      </Link>
-    </Button>
+      </Button>
+    </Link>
   );
 }
